@@ -703,7 +703,7 @@ class GAM(Core, MetaTermMixin):
 
         # solve the linear problem
         return np.linalg.solve(
-            load_diagonal(modelmat.T.dot(modelmat).A), modelmat.T.dot(y_)
+            load_diagonal(modelmat.T.dot(modelmat).toarray()), modelmat.T.dot(y_)
         )
 
         # not sure if this is faster...
@@ -780,7 +780,7 @@ class GAM(Core, MetaTermMixin):
             self._on_loop_start(vars())
 
             WB = W.dot(modelmat[mask, :])  # common matrix product
-            Q, R = np.linalg.qr(WB.A)
+            Q, R = np.linalg.qr(WB.toarray())
 
             if not np.isfinite(Q).all() or not np.isfinite(R).all():
                 raise ValueError(
@@ -1401,7 +1401,7 @@ class GAM(Core, MetaTermMixin):
         idxs = self.terms.get_coef_indices(term)
         cov = self.statistics_['cov'][idxs][:, idxs]
 
-        var = (modelmat.dot(cov) * modelmat.A).sum(axis=1)
+        var = (modelmat.dot(cov) * modelmat.toarray()).sum(axis=1)
         if prediction:
             var += self.distribution.scale
 
@@ -2056,13 +2056,13 @@ class GAM(Core, MetaTermMixin):
                 gam = deepcopy(self)
                 gam.set_params(self.get_params())
                 gam.set_params(**param_grid)
-
+            
                 # warm start with parameters from previous build
                 if models:
                     coef = models[-1].coef_
                     gam.set_params(coef_=coef, force=True, verbose=False)
                 gam.fit(X, y, weights)
-
+                
             except ValueError as error:
                 msg = str(error) + '\non model with params:\n' + str(param_grid)
                 msg += '\nskipping...\n'
@@ -2461,6 +2461,7 @@ class LinearGAM(GAM):
             terms=terms,
             distribution=NormalDist(scale=self.scale),
             link='identity',
+            callbacks=callbacks,
             max_iter=max_iter,
             tol=tol,
             fit_intercept=fit_intercept,
